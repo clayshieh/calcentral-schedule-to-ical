@@ -47,9 +47,32 @@ def calnet_login(username, password):
     raise Exception('CalNet login failed')
 
 def get_userdata(session):
-    schedule_response = session.get('https://calcentral.berkeley.edu/college_scheduler/student/UGRD/2168')
-    matches = re.findall('jsonData = (.*?);\s*Scheduler.initialize', schedule_response.text, re.DOTALL)
-    return json.loads(matches[0])
+    calcentral_api_url = "https://calcentral.berkeley.edu/api/my/academics"
+    schedule_response = session.get(calcentral_api_url)
+    schedule_response = json.loads(schedule_response.text)
+    semesters = schedule_response["semesters"]
+    print ("Select which semester you want to generate a schedule for (e.g 1)")
+    for n,s in enumerate(semesters):
+        print(str(n+1) + ". " + s["name"])
+    index = input("Semester: ")
+    try:
+        index = int(index.strip()) - 1
+    except ValueError:
+        raise Exception("Invalid index entered")
+
+    if index < 0 or index > len(semesters) - 1:
+        raise Exception("Invalid index value entered")
+
+    semester = semesters[index]
+    classes = semester["classes"]
+    schedule = {}
+    for c in classes:
+        schedule[c["course_code"]] = {}
+        for sec in c["sections"]:
+            if len(sec["schedules"]["recurring"]):
+                schedule[c["course_code"]][sec["section_label"]] = sec["schedules"]["recurring"]
+    # NEW FORMATED DATA PULLED FROM CALCENTRAL
+    return schedule
 
 vtimezone_str = \
 """BEGIN:VTIMEZONE
